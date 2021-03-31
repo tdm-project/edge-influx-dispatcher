@@ -2,7 +2,7 @@ name: Docker Build/Publish Image
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [ main, develop ]
 
 env:
   DOCKER_IMAGE_NAME: "tdmproject/edge-influx-dispatcher"
@@ -30,8 +30,8 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USER }}
         password: ${{ secrets.DOCKER_HUB_PWD }}
     -
-      name: Build on master
-      if: github.ref == 'refs/heads/master'
+      name: Build on main
+      if: github.ref == 'refs/heads/main'
       run: |
         docker buildx build \
         --target=final \
