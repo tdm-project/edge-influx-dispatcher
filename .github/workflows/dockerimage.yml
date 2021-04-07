@@ -65,6 +65,12 @@ jobs:
         done
     -
       name: Test the Auth Environment
+      env:
+        INFLUXDB_REMOTE_HOST=influxdb_auth_test
+        INFLUXDB_REMOTE_PORT=8086
+        INFLUXDB_REMOTE_DB=edge_auth_test_db
+        INFLUXDB_REMOTE_USER=admin
+        INFLUXDB_REMOTE_PASS=password
       run: |
         docker run --rm --network tests_default --entrypoint /bin/sh \
         ${{ env.DOCKER_IMAGE_NAME }}:test tests/entrypoint.sh -v test_relay_auth
