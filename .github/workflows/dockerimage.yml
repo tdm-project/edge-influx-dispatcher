@@ -39,9 +39,9 @@ jobs:
         docker-compose -f tests/docker-compose.yaml up -d
         # wait for the services to become healthy
         for i in {1..30}; do
-          curl http://localhost:8086/ping && break
           echo "Waiting for InfluxDB to become ready..."
-          sleep 1
+          sleep 30
+          curl http://localhost:8086/ping && break
         done
     -
       name: Test
