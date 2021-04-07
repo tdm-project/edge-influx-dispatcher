@@ -46,8 +46,8 @@ jobs:
     -
       name: Test
       run: |
-        docker-compose -f tests/docker-compose.yaml exec -T influxdb-dispatcher_test tests/entrypoint.sh -v test_configs
-        docker-compose -f tests/docker-compose.yaml exec -T influxdb-dispatcher_test tests/entrypoint.sh -v test_relay
+        docker run --rm --network tests_default ${{ env.DOCKER_IMAGE_NAME }}:test tests/entrypoint.sh -v test_configs
+        docker run --rm --network tests_default ${{ env.DOCKER_IMAGE_NAME }}:test tests/entrypoint.sh -v test_relay
     - 
       name: Stop the Edge environment
       run: |
