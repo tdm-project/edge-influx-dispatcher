@@ -30,7 +30,7 @@ jobs:
         --target=test \
         --platform ${{ env.PLATFORM }} \
         -t ${{ env.DOCKER_IMAGE_NAME }}:test \
-        -f docker/Dockerfile --output type=image .
+        -f docker/Dockerfile .
     -
       name: Start the Edge environment
       run: |
