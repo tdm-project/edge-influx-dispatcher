@@ -8,6 +8,8 @@ services:
 
   influxdb_test:
     image: influxdb:1.8.4
+    ports:
+      - "8086:8086"
     environment:
       - INFLUXDB_REPORTING_DISABLED=true
 
