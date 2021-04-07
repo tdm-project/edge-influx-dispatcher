@@ -32,6 +32,7 @@ jobs:
         -t ${{ env.DOCKER_IMAGE_NAME }}:test \
         --output "type=image,push=false" \
         -f docker/Dockerfile .
+        docker images
     -
       name: Inspect image
       run: |
@@ -39,7 +40,6 @@ jobs:
     -
       name: Start the Edge environment
       run: |
-        docker images
         docker-compose -f tests/docker-compose.yaml up -d
         # wait for the services to become healthy
         for i in {1..30}; do
