@@ -276,8 +276,11 @@ def configuration_parser(p_args=None):
 
     parser = argparse.ArgumentParser(
         parents=[pre_parser],
-        description=('Collects data from other sensors and '
-                     'send them to a remote InfluxDB server.'),
+        description=(
+            'Collects data from other sensors and sends them to a remote '
+            'InfluxDB server.\n'
+            'If no InfluxDB remote host is provided relay is disabled and '
+            'no messages are forwarded'),
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.set_defaults(**v_config_defaults)
@@ -290,12 +293,15 @@ def configuration_parser(p_args=None):
     parser.add_argument(
         '--local-broker', dest='mqtt_local_host', action='store',
         type=str,
-        help='hostname or address of the local broker (default: {})'.
-        format(MQTT_LOCAL_HOST))
+        help=(f'hostname or address of the local broker '
+              f'"(default: {MQTT_LOCAL_HOST}", '
+              f'env var: MQTT_LOCAL_HOST)'))
     parser.add_argument(
         '--local-port', dest='mqtt_local_port', action='store',
         type=int,
-        help='port of the local broker (default: {})'.format(MQTT_LOCAL_PORT))
+        help=(f'port of the local broker '
+              f'(default: "{MQTT_LOCAL_PORT}", '
+              f'env var: MQTT_LOCAL_PORT)'))
     parser.add_argument(
         '--edge-id', dest='edge_id', action='store',
         type=str,
@@ -303,24 +309,32 @@ def configuration_parser(p_args=None):
     parser.add_argument(
         '--influxdb-remote-host', dest='influxdb_remote_host', action='store',
         type=str,
-        help='hostname or address of the remote Influx database (default: {})'
-             .format(INFLUXDB_REMOTE_HOST))
+        help=(f'hostname or address of the remote Influx database '
+              f'(default: "{INFLUXDB_REMOTE_HOST}", '
+              f'env var: INFLUXDB_REMOTE_HOST)'))
     parser.add_argument(
         '--influxdb-remote-port', dest='influxdb_remote_port', action='store',
         type=int,
-        help='port of the remote Influx database (default: {})'.format(INFLUXDB_REMOTE_PORT))
+        help=(f'port of the remote Influx database '
+              f'(default: "{INFLUXDB_REMOTE_PORT}", '
+              f'env var: INFLUXDB_REMOTE_PORT)'))
     parser.add_argument(
         '--influxdb-remote-db', dest='influxdb_remote_db', action='store',
         type=str,
-        help='database on the remote Influx server (default: lower-case Edge ID)')
+        help=(f'database on the remote Influx server '
+              f'(default: lower-case Edge ID, env var: INFLUXDB_REMOTE_DB)'))
     parser.add_argument(
         '--influxdb-remote-user', dest='influxdb_remote_user', action='store',
         type=str,
-        help='username to use for the remote InfluxDB server (default: {})'.format(INFLUXDB_REMOTE_USER))
+        help=(f'username to use for the remote InfluxDB server '
+              f'(default: "{INFLUXDB_REMOTE_USER}", '
+              f'env var: INFLUXDB_REMOTE_USER)'))
     parser.add_argument(
         '--influxdb-remote-password', dest='influxdb_remote_pass', action='store',
         type=str,
-        help='password to use for the remote InfluxDB server (default: {})'.format(INFLUXDB_REMOTE_PASS))
+        help=(f'password to use for the remote InfluxDB server '
+              f'(default: "{INFLUXDB_REMOTE_PASS}", '
+              f'env var: INFLUXDB_REMOTE_PASS)'))
 
     args = parser.parse_args(remaining_args)
     return args
