@@ -33,6 +33,10 @@ jobs:
         --output "type=image,push=false" \
         -f docker/Dockerfile .
     -
+      name: Inspect image
+      run: |
+        docker buildx imagetools inspect ${{ env.DOCKER_IMAGE_NAME }}:test
+    -
       name: Start the Edge environment
       run: |
         docker images
