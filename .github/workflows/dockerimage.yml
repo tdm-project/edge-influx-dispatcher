@@ -39,8 +39,8 @@ jobs:
         # wait for the services to become healthy
         for i in {1..30}; do
           echo "Waiting for InfluxDB to become ready..."
-          sleep 1
           curl http://localhost:8086/ping && break
+          sleep 1
         done
     -
       name: Test
@@ -53,6 +53,25 @@ jobs:
       name: Stop the Edge environment
       run: |
         docker-compose -f tests/docker-compose.yaml down
+    -
+      name: Start the Auth Edge environment
+      run: |
+        docker-compose -f tests/docker-compose-auth.yaml up -d
+        # wait for the services to become healthy
+        for i in {1..30}; do
+          echo "Waiting for InfluxDB to become ready..."
+          curl http://localhost:8086/ping && break
+          sleep 1
+        done
+    -
+      name: Test the Auth Environment
+      run: |
+        docker run --rm --network tests_default --entrypoint /bin/sh \
+        ${{ env.DOCKER_IMAGE_NAME }}:test tests/entrypoint.sh -v test_relay_auth
+    - 
+      name: Stop the Auth Edge environment
+      run: |
+        docker-compose -f tests/docker-compose-auth.yaml down
     -
       name: Login to DockerHub
       uses: docker/login-action@v1
