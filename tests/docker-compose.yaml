@@ -20,5 +20,6 @@ services:
       - mosquitto_test
     volumes:
       - ./configs/:/opt/configs/
+    command: --edge-id testing-edge-id
 
 # vim: ts=2 expandtab

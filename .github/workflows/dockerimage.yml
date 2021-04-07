@@ -35,19 +35,20 @@ jobs:
     -
       name: Start the Edge environment
       run: |
-        docker images
-        docker-compose -f tests/docker-compose.yaml up 
+        docker-compose -f tests/docker-compose.yaml up -d
         # wait for the services to become healthy
         for i in {1..30}; do
           echo "Waiting for InfluxDB to become ready..."
-          sleep 60
+          sleep 1
           curl http://localhost:8086/ping && break
         done
     -
       name: Test
       run: |
-        docker run --rm --network tests_default --entrypoint /bin/sh ${{ env.DOCKER_IMAGE_NAME }}:test tests/entrypoint.sh -v test_configs
-        docker run --rm --network tests_default --entrypoint /bin/sh ${{ env.DOCKER_IMAGE_NAME }}:test tests/entrypoint.sh -v test_relay
+        docker run --rm --network tests_default --entrypoint /bin/sh \
+        ${{ env.DOCKER_IMAGE_NAME }}:test tests/entrypoint.sh -v test_configs
+        docker run --rm --network tests_default --entrypoint /bin/sh \
+        ${{ env.DOCKER_IMAGE_NAME }}:test tests/entrypoint.sh -v test_relay
     - 
       name: Stop the Edge environment
       run: |
