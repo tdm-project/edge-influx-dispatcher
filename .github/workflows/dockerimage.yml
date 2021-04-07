@@ -40,7 +40,7 @@ jobs:
         # wait for the services to become healthy
         for i in {1..30}; do
           echo "Waiting for InfluxDB to become ready..."
-          sleep 30
+          sleep 60
           curl http://localhost:8086/ping && break
         done
     -
