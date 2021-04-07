@@ -63,18 +63,15 @@ jobs:
           curl http://localhost:8086/ping && break
           sleep 1
         done
-    - 
-      name: Set the environment variables
-      run: |
-        echo "INFLUXDB_REMOTE_HOST=influxdb_auth_test" >> $GITHUB_ENV
-        echo "INFLUXDB_REMOTE_PORT=8086" >> $GITHUB_ENV
-        echo "INFLUXDB_REMOTE_DB=edge_auth_test_db" >> $GITHUB_ENV
-        echo "INFLUXDB_REMOTE_USER=admin" >> $GITHUB_ENV
-        echo "INFLUXDB_REMOTE_PASS=password" >> $GITHUB_ENV
     -
       name: Test the Auth Environment
       run: |
         docker run --rm --network tests_default --entrypoint /bin/sh \
+        -e INFLUXDB_REMOTE_HOST=influxdb_auth_test \
+        -e INFLUXDB_REMOTE_PORT=8086 \
+        -e INFLUXDB_REMOTE_DB=edge_auth_test_db \
+        -e INFLUXDB_REMOTE_USER=admin \
+        -e INFLUXDB_REMOTE_PASS=password \
         ${{ env.DOCKER_IMAGE_NAME }}:test tests/entrypoint.sh -v test_relay_auth
     - 
       name: Stop the Auth Edge environment
