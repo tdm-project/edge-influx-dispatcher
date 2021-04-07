@@ -40,10 +40,10 @@ CMD [ "-c", "/opt/configs/tdm.conf" ]
 
 # ============================================================================ #
 # Testing Stage: final stage for testing purposes                              #
-# docker build --target=testing -f docker/Dockerfile \                         #
+# docker build --target=test -f docker/Dockerfile \                            #
 #              -t tdmproject/edge-influx-dispatcher.                           #
 # ============================================================================ #
-FROM final AS testing
+FROM final AS test
 
 ARG APP_HOME
 

@@ -1,0 +1,22 @@
+version: '3.5'
+
+services:
+  mosquitto_test:
+    image: tdmproject/edge-mosquitto:latest
+    volumes:
+      - ./configs/:/mosquitto/configs/
+
+  influxdb_test:
+    image: influxdb:1.8.4
+    environment:
+      - INFLUXDB_REPORTING_DISABLED=true
+
+  influxdb-dispatcher_test:
+    image: tdmproject/edge-influx-dispatcher:test
+    depends_on:
+      - influxdb_test
+      - mosquitto_test
+    volumes:
+      - ./configs/:/opt/configs/
+
+# vim: ts=2 expandtab

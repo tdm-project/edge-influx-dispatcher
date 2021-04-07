@@ -1,0 +1,31 @@
+version: '3.5'
+
+services:
+  mosquitto_test:
+    image: tdmproject/edge-mosquitto:latest
+    volumes:
+      - ./configs/:/mosquitto/configs/
+
+  influxdb_auth_test:
+    image: influxdb:1.8.4
+    environment:
+      - INFLUXDB_REPORTING_DISABLED=true
+      - INFLUXDB_HTTP_AUTH_ENABLED=true
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=password
+
+  influxdb-dispatcher_test:
+    image: tdmproject/edge-influx-dispatcher:test
+    depends_on:
+      - influxdb_auth_test
+      - mosquitto_test
+    environment:
+      - INFLUXDB_REMOTE_HOST=influxdb_auth_test
+      - INFLUXDB_REMOTE_PORT=8086
+      - INFLUXDB_REMOTE_DB=edge_auth_test_db
+      - INFLUXDB_REMOTE_USER=admin
+      - INFLUXDB_REMOTE_PASS=password
+    volumes:
+      - ./configs/:/opt/configs/
+
+# vim: ts=2 expandtab

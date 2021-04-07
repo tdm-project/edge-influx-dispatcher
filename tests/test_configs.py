@@ -53,21 +53,21 @@ COMMANDLINE_PARAMETERS = {
     #    'cmdline': '--edge-id',
     #    help='id of the edge gateway (default: the board serial number)')
     'influxdb_remote_host': {
-        'cmdline': '--remote-host', 'default': INFLUXDB_REMOTE_HOST},
+        'cmdline': '--influxdb-remote-host', 'default': INFLUXDB_REMOTE_HOST},
     'influxdb_remote_port': {
-        'cmdline': '--remote-port', 'default': INFLUXDB_REMOTE_PORT},
+        'cmdline': '--influxdb-remote-port', 'default': INFLUXDB_REMOTE_PORT},
     #'influxdb_remote_db': {
-    #        'cmdline': '--remote-db', 'default': 
+    #        'cmdline': '--influxdb-remote-db', 'default':
     #    help='database on the remote Influx server (default: lower-case Edge ID)')
     'influxdb_remote_user': {
-        'cmdline': '--remote-user', 'default': INFLUXDB_REMOTE_USER},
+        'cmdline': '--influxdb-remote-user', 'default': INFLUXDB_REMOTE_USER},
     'influxdb_remote_pass': {
-        'cmdline': '--remote-password', 'default': INFLUXDB_REMOTE_PASS}
+        'cmdline': '--influxdb-remote-password', 'default': INFLUXDB_REMOTE_PASS}
 }
 
 
 class TestCommandLineParser(unittest.TestCase):
-    """"
+    """
     Tests if the command line options override the settings in the
     configuration file.
     """
@@ -123,7 +123,7 @@ class TestCommandLineParser(unittest.TestCase):
         _f.close()
 
     def test_command_line_long(self):
-        """"
+        """
         Tests if the command line options are parsed.
         """
         _cmd_line = []
@@ -138,13 +138,13 @@ class TestCommandLineParser(unittest.TestCase):
         _cmd_line.extend(
             ['--edge-id', str(self._test_options.edge_id)])
         _cmd_line.extend(
-            ['--remote-host', str(self._test_options.influxdb_remote_host)])
+            ['--influxdb-remote-host', str(self._test_options.influxdb_remote_host)])
         _cmd_line.extend(
-            ['--remote-port', str(self._test_options.influxdb_remote_port)])
+            ['--influxdb-remote-port', str(self._test_options.influxdb_remote_port)])
         _cmd_line.extend(
-            ['--remote-user', str(self._test_options.influxdb_remote_user)])
+            ['--influxdb-remote-user', str(self._test_options.influxdb_remote_user)])
         _cmd_line.extend(
-            ['--remote-pass', str(self._test_options.influxdb_remote_pass)])
+            ['--influxdb-remote-pass', str(self._test_options.influxdb_remote_pass)])
 
         _args = configuration_parser(_cmd_line)
 
@@ -166,7 +166,7 @@ class TestCommandLineParser(unittest.TestCase):
             self._test_options.influxdb_remote_pass, _args.influxdb_remote_pass)
 
     def test_command_line_long_override(self):
-        """"
+        """
         Tests if the command line options override the settings in the
         configuration file (long options).
         """
@@ -182,13 +182,13 @@ class TestCommandLineParser(unittest.TestCase):
             ['--logging-level', str(self._test_options.logging_level)])
 
         _cmd_line.extend(
-            ['--remote-host', str(self._test_options.influxdb_remote_host)])
+            ['--influxdb-remote-host', str(self._test_options.influxdb_remote_host)])
         _cmd_line.extend(
-            ['--remote-port', str(self._test_options.influxdb_remote_port)])
+            ['--influxdb-remote-port', str(self._test_options.influxdb_remote_port)])
         _cmd_line.extend(
-            ['--remote-user', str(self._test_options.influxdb_remote_user)])
+            ['--influxdb-remote-user', str(self._test_options.influxdb_remote_user)])
         _cmd_line.extend(
-            ['--remote-pass', str(self._test_options.influxdb_remote_pass)])
+            ['--influxdb-remote-pass', str(self._test_options.influxdb_remote_pass)])
 
         _args = configuration_parser(_cmd_line)
 
@@ -210,7 +210,7 @@ class TestCommandLineParser(unittest.TestCase):
             self._test_options.influxdb_remote_pass, _args.influxdb_remote_pass)
 
     def test_command_line_long_partial_override(self):
-        """"
+        """
         Tests if the command line options override the settings in the
         configuration file (long options).
         """
@@ -238,7 +238,7 @@ class TestCommandLineParser(unittest.TestCase):
 
 
 class TestGeneralSectionConfigFileParser(unittest.TestCase):
-    """"
+    """
     Checks if the GENERAL section options are present in the parser, their
     default values are defined and the GENERAL SECTION of configuration file is
     read and parsed.
