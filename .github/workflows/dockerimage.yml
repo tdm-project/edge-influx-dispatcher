@@ -36,7 +36,7 @@ jobs:
       name: Start the Edge environment
       run: |
         docker images
-        docker-compose -f tests/docker-compose.yaml up -d
+        docker-compose -f tests/docker-compose.yaml up 
         # wait for the services to become healthy
         for i in {1..30}; do
           echo "Waiting for InfluxDB to become ready..."
