@@ -20,6 +20,7 @@
 Edge Gateway Remote Dispatcher microservice for InfluxDB.
 """
 
+import os
 import re
 import sys
 import signal
@@ -45,6 +46,10 @@ INFLUXDB_REMOTE_PASS = ""             # Remote InfluxDB password
 
 APPLICATION_NAME = 'influxdb_dispatcher'
 
+GENERIC_ENV_VAR = ["MQTT_LOCAL_HOST", "MQTT_LOCAL_PORT"]
+
+SPECIFIC_ENV_VAR = ["INFLUXDB_REMOTE_HOST", "INFLUXDB_REMOTE_PORT",
+        "INFLUXDB_REMOTE_DB", "INFLUXDB_REMOTE_USER", "INFLUXDB_REMOTE_PASS"]
 
 TOPIC_LIST = [
     'WeatherObserved',
@@ -178,8 +183,8 @@ class MQTTConnection():
             _station_id, _, _sensor_id = _signal_id.partition('.')
 
             fields = json.loads(_message)
-            timestamp = fields.pop('timestamp')
-            data_points = [{
+            timestamp = fields.pop('timestamp', None)
+            data_point = {
                 "measurement": _topic,
                 "tags": {
                     "edge": userdata['EDGE_ID'].lower(),
@@ -188,9 +193,10 @@ class MQTTConnection():
                 },
                 "fields": {
                     k: try_cast_to_float(v) for k, v in fields.items()
-                    },
-                "time": timestamp
-            }]
+                }
+            }
+            if timestamp is not None:
+                data_point.update({"time": timestamp})
 
             with influxdb_connection(
                     userdata['INFLUXDB_REMOTE_HOST'],
@@ -200,8 +206,8 @@ class MQTTConnection():
                     userdata['INFLUXDB_REMOTE_PASS'],
                     self._logger) as _remote_client:
                 try:
-                    self._logger.debug(f"Writing to remote InfluxDB: {data_points}")
-                    _remote_client.write_points(data_points, time_precision='s')
+                    self._logger.debug(f"Writing to remote InfluxDB: {data_point}")
+                    _remote_client.write_points([data_point], time_precision='s')
                 except (
                     influxdb.exceptions.InfluxDBClientError,
                     influxdb.exceptions.InfluxDBServerError,
@@ -261,6 +267,13 @@ def configuration_parser(p_args=None):
         v_config_defaults.update(_general_defaults)
         v_config_defaults.update(_config.items(APPLICATION_NAME))
 
+    # Environment variables override config file options but not command line
+    # options
+    ENV_VARS = GENERIC_ENV_VAR + SPECIFIC_ENV_VAR
+    v_config_defaults.update({
+        _key.lower(): _val for _key, _val in os.environ.items() if _key in ENV_VARS
+    })
+
     parser = argparse.ArgumentParser(
         parents=[pre_parser],
         description=('Collects data from other sensors and '
@@ -288,24 +301,24 @@ def configuration_parser(p_args=None):
         type=str,
         help='id of the edge gateway (default: the board serial number)')
     parser.add_argument(
-        '--remote-host', dest='influxdb_remote_host', action='store',
+        '--influxdb-remote-host', dest='influxdb_remote_host', action='store',
         type=str,
         help='hostname or address of the remote Influx database (default: {})'
              .format(INFLUXDB_REMOTE_HOST))
     parser.add_argument(
-        '--remote-port', dest='influxdb_remote_port', action='store',
+        '--influxdb-remote-port', dest='influxdb_remote_port', action='store',
         type=int,
         help='port of the remote Influx database (default: {})'.format(INFLUXDB_REMOTE_PORT))
     parser.add_argument(
-        '--remote-db', dest='influxdb_remote_db', action='store',
+        '--influxdb-remote-db', dest='influxdb_remote_db', action='store',
         type=str,
         help='database on the remote Influx server (default: lower-case Edge ID)')
     parser.add_argument(
-        '--remote-user', dest='influxdb_remote_user', action='store',
+        '--influxdb-remote-user', dest='influxdb_remote_user', action='store',
         type=str,
         help='username to use for the remote InfluxDB server (default: {})'.format(INFLUXDB_REMOTE_USER))
     parser.add_argument(
-        '--remote-password', dest='influxdb_remote_pass', action='store',
+        '--influxdb-remote-password', dest='influxdb_remote_pass', action='store',
         type=str,
         help='password to use for the remote InfluxDB server (default: {})'.format(INFLUXDB_REMOTE_PASS))
 
