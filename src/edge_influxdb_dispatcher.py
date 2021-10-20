@@ -30,10 +30,14 @@ import influxdb
 import argparse
 import configparser
 import requests
+from distutils.util import strtobool
 import paho.mqtt.client as mqtt
+import urllib3
 
 from contextlib import contextmanager
 
+
+urllib3. disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 MQTT_LOCAL_HOST = "localhost"  # Local MQTT Broker address
 MQTT_LOCAL_PORT = 1883         # Local MQTT Broker port
@@ -43,25 +47,28 @@ INFLUXDB_REMOTE_PORT = 8086           # Remote InfluxDB port
 INFLUXDB_REMOTE_DB = ""               # Remote InfluxDB database
 INFLUXDB_REMOTE_USER = ""             # Remote InfluxDB username
 INFLUXDB_REMOTE_PASS = ""             # Remote InfluxDB password
+INFLUXDB_REMOTE_HTTPS = "False"       # Remote InfluxDB password
 
 APPLICATION_NAME = 'influxdb_dispatcher'
 
 GENERIC_ENV_VAR = ["MQTT_LOCAL_HOST", "MQTT_LOCAL_PORT"]
 
 SPECIFIC_ENV_VAR = ["INFLUXDB_REMOTE_HOST", "INFLUXDB_REMOTE_PORT",
-        "INFLUXDB_REMOTE_DB", "INFLUXDB_REMOTE_USER", "INFLUXDB_REMOTE_PASS"]
+                    "INFLUXDB_REMOTE_DB", "INFLUXDB_REMOTE_USER",
+                    "INFLUXDB_REMOTE_PASS", "INFLUXDB_REMOTE_HTTPS"]
 
 TOPIC_LIST = [
     'WeatherObserved',
-#    'EnergyMonitor',
-#    'DeviceStatus'
+    # 'EnergyMonitor',
+    # 'DeviceStatus'
 ]
+
 
 def edge_serial():
     """Retrieves the serial number from the hardware platform."""
     _serial = None
     with open('/proc/cpuinfo', 'r') as _fp:
-       for _line in _fp:
+        for _line in _fp:
             _match = re.search(r'Serial\s+:\s+0+(?P<serial>\w+)$', _line)
             if _match:
                 _serial = _match.group('serial').upper()
@@ -77,14 +84,34 @@ def try_cast_to_float(value):
         return value
 
 
+def ssl_options(https):
+    try:
+        _use_ssl = bool(strtobool(https))
+        _verify_ssl = True
+    except ValueError:
+        if https.lower() == 'unsafe':
+            _use_ssl = True
+            _verify_ssl = False
+        else:
+            _use_ssl = False
+            _verify_ssl = False
+
+    return _use_ssl, _verify_ssl
+
+
 @contextmanager
-def influxdb_connection(host, port, database, username, password, logger):
+def influxdb_connection(host, port, database, username, password, https,
+                        logger):
+    _use_ssl, _verify_ssl = ssl_options(https)
+
     _client = influxdb.InfluxDBClient(
         host=host,
         port=port,
         database=database,
         username=username,
-        password=password
+        password=password,
+        ssl=_use_ssl,
+        verify_ssl=_verify_ssl
     )
 
     try:
@@ -96,7 +123,7 @@ def influxdb_connection(host, port, database, username, password, logger):
             _client.create_database(database)
 
         yield _client
-    except:
+    except Exception:
         yield _client
     finally:
         _client.close()
@@ -140,11 +167,19 @@ class MQTTConnection():
             sys.exit(-1)
 
         if self._remote_relay_enabled:
+            _use_ssl, _verify_ssl = ssl_options(
+                self._userdata['INFLUXDB_REMOTE_HTTPS'])
+
+            # if _use_ssl:
+            # if not _verify_ssl:
             self._logger.info(
-                "InfluxDB remote host is set: remote data transmission is enabled")
+                f"InfluxDB remote host is set: remote data transmission is "
+                f"enabled using {'unverified ' if not _verify_ssl else ''}"
+                f"HTTP{'S' if _use_ssl else ''}")
         else:
             self._logger.info(
-                "InfluxDB remote host is empty: remote data transmission is disabled")
+                "InfluxDB remote host is empty: remote data transmission is "
+                "disabled")
 
         self._local_client.loop_forever()
 
@@ -204,19 +239,24 @@ class MQTTConnection():
                     userdata['INFLUXDB_REMOTE_DB'],
                     userdata['INFLUXDB_REMOTE_USER'],
                     userdata['INFLUXDB_REMOTE_PASS'],
+                    userdata['INFLUXDB_REMOTE_HTTPS'],
                     self._logger) as _remote_client:
                 try:
-                    self._logger.debug(f"Writing to remote InfluxDB: {data_point}")
-                    _remote_client.write_points([data_point], time_precision='s')
+                    self._logger.debug(
+                        f"Writing to remote InfluxDB: {data_point}")
+                    _remote_client.write_points(
+                        [data_point], time_precision='s')
                 except (
-                    influxdb.exceptions.InfluxDBClientError,
-                    influxdb.exceptions.InfluxDBServerError,
-                    requests.exceptions.ConnectionError) as ex:
+                        influxdb.exceptions.InfluxDBClientError,
+                        influxdb.exceptions.InfluxDBServerError,
+                        requests.exceptions.ConnectionError) as ex:
                     self._logger.error(ex)
                     # self._logger.exception(ex)
         else:
             self._logger.debug(
-                "InfluxDB remote host is empty: remote data transmission is disabled")
+                "InfluxDB remote host is empty: remote data transmission is "
+                "disabled")
+
 
 def configuration_parser(p_args=None):
     pre_parser = argparse.ArgumentParser(add_help=False)
@@ -229,17 +269,18 @@ def configuration_parser(p_args=None):
     args, remaining_args = pre_parser.parse_known_args(p_args)
 
     v_general_config_defaults = {
-        'mqtt_local_host' : MQTT_LOCAL_HOST,
-        'mqtt_local_port' : MQTT_LOCAL_PORT,
-        'logging_level'   : logging.INFO,
+        'mqtt_local_host': MQTT_LOCAL_HOST,
+        'mqtt_local_port': MQTT_LOCAL_PORT,
+        'logging_level': logging.INFO,
     }
 
     v_specific_config_defaults = {
-        'influxdb_remote_host' : INFLUXDB_REMOTE_HOST,
-        'influxdb_remote_port' : INFLUXDB_REMOTE_PORT,
-        'influxdb_remote_db' : INFLUXDB_REMOTE_DB,
-        'influxdb_remote_user' : INFLUXDB_REMOTE_USER,
-        'influxdb_remote_pass' : INFLUXDB_REMOTE_PASS,
+        'influxdb_remote_host': INFLUXDB_REMOTE_HOST,
+        'influxdb_remote_port': INFLUXDB_REMOTE_PORT,
+        'influxdb_remote_db': INFLUXDB_REMOTE_DB,
+        'influxdb_remote_user': INFLUXDB_REMOTE_USER,
+        'influxdb_remote_pass': INFLUXDB_REMOTE_PASS,
+        'influxdb_remote_https': INFLUXDB_REMOTE_HTTPS
     }
 
     v_config_section_defaults = {
@@ -271,7 +312,8 @@ def configuration_parser(p_args=None):
     # options
     ENV_VARS = GENERIC_ENV_VAR + SPECIFIC_ENV_VAR
     v_config_defaults.update({
-        _key.lower(): _val for _key, _val in os.environ.items() if _key in ENV_VARS
+        _key.lower(): _val for _key, _val in os.environ.items()
+        if _key in ENV_VARS
     })
 
     parser = argparse.ArgumentParser(
@@ -321,8 +363,8 @@ def configuration_parser(p_args=None):
     parser.add_argument(
         '--influxdb-remote-db', dest='influxdb_remote_db', action='store',
         type=str,
-        help=(f'database on the remote Influx server '
-              f'(default: lower-case Edge ID, env var: INFLUXDB_REMOTE_DB)'))
+        help=('database on the remote Influx server '
+              '(default: lower-case Edge ID, env var: INFLUXDB_REMOTE_DB)'))
     parser.add_argument(
         '--influxdb-remote-user', dest='influxdb_remote_user', action='store',
         type=str,
@@ -330,11 +372,17 @@ def configuration_parser(p_args=None):
               f'(default: "{INFLUXDB_REMOTE_USER}", '
               f'env var: INFLUXDB_REMOTE_USER)'))
     parser.add_argument(
-        '--influxdb-remote-password', dest='influxdb_remote_pass', action='store',
-        type=str,
+        '--influxdb-remote-password', dest='influxdb_remote_pass',
+        action='store', type=str,
         help=(f'password to use for the remote InfluxDB server '
               f'(default: "{INFLUXDB_REMOTE_PASS}", '
               f'env var: INFLUXDB_REMOTE_PASS)'))
+    parser.add_argument(
+        '--influxdb-remote-https', dest='influxdb_remote_https',
+        action='store', type=str,
+        help=(f'whether to use HTTPS for the remote InfluxDB server '
+              f'(default: "{INFLUXDB_REMOTE_HTTPS}", '
+              f'env var: INFLUXDB_REMOTE_HTTPS)'))
 
     args = parser.parse_args(remaining_args)
     return args
@@ -378,7 +426,8 @@ def main():
         'INFLUXDB_REMOTE_PORT': args.influxdb_remote_port,
         'INFLUXDB_REMOTE_DB': args.influxdb_remote_db,
         'INFLUXDB_REMOTE_USER': args.influxdb_remote_user,
-        'INFLUXDB_REMOTE_PASS': args.influxdb_remote_pass
+        'INFLUXDB_REMOTE_PASS': args.influxdb_remote_pass,
+        'INFLUXDB_REMOTE_HTTPS': args.influxdb_remote_https
     }
 
     connection = MQTTConnection(args.mqtt_local_host, args.mqtt_local_port,
