@@ -48,6 +48,7 @@ INFLUXDB_REMOTE_DB = ""               # Remote InfluxDB database
 INFLUXDB_REMOTE_USER = ""             # Remote InfluxDB username
 INFLUXDB_REMOTE_PASS = ""             # Remote InfluxDB password
 INFLUXDB_REMOTE_HTTPS = "False"       # Remote InfluxDB password
+INFLUXDB_DISPATCHED_TOPICS = "all"    # Topics to dispatch
 
 APPLICATION_NAME = 'influxdb_dispatcher'
 
@@ -59,7 +60,7 @@ SPECIFIC_ENV_VAR = ["INFLUXDB_REMOTE_HOST", "INFLUXDB_REMOTE_PORT",
 
 TOPIC_LIST = [
     'WeatherObserved',
-    # 'EnergyMonitor',
+    'EnergyMonitor',
     # 'DeviceStatus'
 ]
 
@@ -139,6 +140,7 @@ class MQTTConnection():
         self._port = port
         self._keepalive = keepalive
         self._userdata = userdata
+        self._dispatched_topics = list()
 
         self._logger = logger
         if self._logger is None:
@@ -157,6 +159,10 @@ class MQTTConnection():
     def connect(self):
         self._logger.debug("Connecting to Local MQTT broker '{:s}:{:d}'".
                            format(self._host, self._port))
+        _valid_topics = set(TOPIC_LIST)
+        _requested_topics = set(self._userdata['INFLUXDB_DISPATCHED_TOPICS'])
+        self._dispatched_topics = _valid_topics.intersection(_requested_topics)
+
         try:
             self._local_client.connect(self._host, self._port, self._keepalive)
         except Exception as ex:
@@ -176,6 +182,9 @@ class MQTTConnection():
                 f"InfluxDB remote host is set: remote data transmission is "
                 f"enabled using {'unverified ' if not _verify_ssl else ''}"
                 f"HTTP{'S' if _use_ssl else ''}")
+            self._logger.info(
+                f"The following topics will be dispatched: "
+                f"{self._dispatched_topics}")
         else:
             self._logger.info(
                 "InfluxDB remote host is empty: remote data transmission is "
@@ -193,7 +202,7 @@ class MQTTConnection():
             "Connected to MQTT broker '{:s}:{:d}' with result code {:d}".
             format(self._host, self._port, rc))
 
-        for _topic in TOPIC_LIST:
+        for _topic in self._dispatched_topics:
             _topic += '/#'
 
             self._logger.debug("Subscribing to {:s}".format(_topic))
@@ -231,7 +240,7 @@ class MQTTConnection():
                 }
             }
             if timestamp is not None:
-                data_point.update({"time": timestamp})
+                data_point.update({"time": int(timestamp)})
 
             with influxdb_connection(
                     userdata['INFLUXDB_REMOTE_HOST'],
@@ -280,7 +289,8 @@ def configuration_parser(p_args=None):
         'influxdb_remote_db': INFLUXDB_REMOTE_DB,
         'influxdb_remote_user': INFLUXDB_REMOTE_USER,
         'influxdb_remote_pass': INFLUXDB_REMOTE_PASS,
-        'influxdb_remote_https': INFLUXDB_REMOTE_HTTPS
+        'influxdb_remote_https': INFLUXDB_REMOTE_HTTPS,
+        'influxdb_dispatched_topics': INFLUXDB_DISPATCHED_TOPICS
     }
 
     v_config_section_defaults = {
@@ -383,6 +393,12 @@ def configuration_parser(p_args=None):
         help=(f'whether to use HTTPS for the remote InfluxDB server '
               f'(default: "{INFLUXDB_REMOTE_HTTPS}", '
               f'env var: INFLUXDB_REMOTE_HTTPS)'))
+    parser.add_argument(
+        '--influxdb-dispatched-topics', dest='influxdb_dispatched_topics',
+        action='store', type=str,
+        help=('comma separated list of topics to dispatch or "all" '
+              '(default: "all", '
+              'env var: INFLUXDB_DISPATCHED_TOPICS)'))
 
     args = parser.parse_args(remaining_args)
     return args
@@ -420,6 +436,11 @@ def main():
     if not args.influxdb_remote_db:
         args.influxdb_remote_db = args.edge_id.lower()
 
+    if args.influxdb_dispatched_topics == 'all':
+        _dispatched_topics = TOPIC_LIST
+    else:
+        _dispatched_topics = args.influxdb_dispatched_topics.split(',')
+
     _userdata = {
         'EDGE_ID': args.edge_id,
         'INFLUXDB_REMOTE_HOST': args.influxdb_remote_host,
@@ -427,7 +448,8 @@ def main():
         'INFLUXDB_REMOTE_DB': args.influxdb_remote_db,
         'INFLUXDB_REMOTE_USER': args.influxdb_remote_user,
         'INFLUXDB_REMOTE_PASS': args.influxdb_remote_pass,
-        'INFLUXDB_REMOTE_HTTPS': args.influxdb_remote_https
+        'INFLUXDB_REMOTE_HTTPS': args.influxdb_remote_https,
+        'INFLUXDB_DISPATCHED_TOPICS': _dispatched_topics
     }
 
     connection = MQTTConnection(args.mqtt_local_host, args.mqtt_local_port,
